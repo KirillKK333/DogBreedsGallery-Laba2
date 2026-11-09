@@ -141,10 +141,12 @@ class BreedsViewModelTest {
 
         breedsFlow.value = sampleBreeds
 
-        viewModel.filterByTemperament("Friendly")
-        testDispatcher.scheduler.advanceUntilIdle()
-
         viewModel.uiState.test {
+            expectMostRecentItem() // Ждем начальной загрузки
+
+            viewModel.filterByTemperament("Friendly")
+            testDispatcher.scheduler.advanceUntilIdle()
+
             val state = expectMostRecentItem()
             assertEquals(2, state.breeds.size)
             assertTrue(state.breeds.all { it.temperament.contains("Friendly") })
