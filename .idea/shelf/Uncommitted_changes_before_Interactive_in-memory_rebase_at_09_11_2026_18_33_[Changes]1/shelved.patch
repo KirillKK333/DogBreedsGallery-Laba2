@@ -1,0 +1,13 @@
+Index: prompts/01_unit_tests.md
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/prompts/01_unit_tests.md b/prompts/01_unit_tests.md
+new file mode 100644
+--- /dev/null	(date 1794224006688)
++++ b/prompts/01_unit_tests.md	(date 1794224006688)
+@@ -0,0 +1,2 @@
++# Промпт: 5 unit-тестов для BreedsViewModel
++**Запрос к ИИ:** Сгенерируй 5 unit-тестов для BreedsViewModel в Android-проекте на Kotlin. Используй JUnit4, MockK для моков и Turbine для тестирования StateFlow. Покрой сценарии: фильтрация по поисковому запросу (с учётом и без учёта регистра), пустой поисковый запрос, вызов repository.toggleFavorite, обработка ошибки при обновлении.
+\ No newline at end of file
