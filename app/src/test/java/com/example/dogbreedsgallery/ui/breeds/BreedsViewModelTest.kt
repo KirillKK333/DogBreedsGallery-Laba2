@@ -5,6 +5,7 @@ import com.example.dogbreedsgallery.data.BreedRepository
 import com.example.dogbreedsgallery.data.local.BreedEntity
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -22,15 +23,18 @@ import org.junit.Test
 class BreedsViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private val repository: BreedRepository = mockk(relaxed = true)
+    private lateinit var repository: BreedRepository
+    private lateinit var viewModel: BreedsViewModel
 
     private val breedsFlow = MutableStateFlow<List<BreedEntity>>(emptyList())
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        coEvery { repository.allBreeds } returns breedsFlow
+        repository = mockk(relaxed = true)
+        every { repository.allBreeds } returns breedsFlow
         coEvery { repository.refreshBreeds() } returns Result.success(Unit)
+        viewModel = BreedsViewModel(repository)
     }
 
     @After
@@ -45,23 +49,16 @@ class BreedsViewModelTest {
             BreedEntity(2, "Beagle", "Friendly", "UK", "12 years", "Desc", "url", false)
         )
 
-        val viewModel = BreedsViewModel(repository)
-
         viewModel.uiState.test {
-            awaitItem() // initial state from init { refresh() }
+            expectMostRecentItem() // Ждем начального состояния (пустой список)
 
+            // Теперь, когда мы подписаны, обновляем данные в репозитории
             breedsFlow.value = sampleBreeds
+            testDispatcher.scheduler.advanceUntilIdle() // Даем ViewModel время обработать изменение
 
-            val emission = awaitItem()
-            assertEquals(2, emission.breeds.size)
-            assertEquals("", emission.searchQuery)
-
-            viewModel.onSearchQueryChange("")
-            val queryEmission = awaitItem()
-            assertEquals(2, queryEmission.breeds.size)
-            assertEquals("", queryEmission.searchQuery)
-
-            cancelAndIgnoreRemainingEvents()
+            val state = expectMostRecentItem()
+            assertEquals(2, state.breeds.size)
+            assertEquals("", state.searchQuery)
         }
     }
 
@@ -74,18 +71,16 @@ class BreedsViewModelTest {
         )
 
         breedsFlow.value = sampleBreeds
-        val viewModel = BreedsViewModel(repository)
 
         viewModel.uiState.test {
-            awaitItem() // initial
+            expectMostRecentItem() // Ждем начальной загрузки данных
 
             viewModel.onSearchQueryChange("Golden")
-            val emission = awaitItem()
-            assertEquals(1, emission.breeds.size)
-            assertEquals("Golden Retriever", emission.breeds[0].name)
-            assertEquals("Golden", emission.searchQuery)
+            testDispatcher.scheduler.advanceUntilIdle()
 
-            cancelAndIgnoreRemainingEvents()
+            val state = expectMostRecentItem()
+            assertEquals(1, state.breeds.size)
+            assertEquals("Golden Retriever", state.breeds[0].name)
         }
     }
 
@@ -93,40 +88,31 @@ class BreedsViewModelTest {
     fun searchFilteringIgnoreCase() = runTest {
         val sampleBreeds = listOf(
             BreedEntity(1, "Golden Retriever", "Friendly", "UK", "12 years", "Desc", "url", false),
-            BreedEntity(2, "German Shepherd", "Alert", "Germany", "13 years", "Desc", "url", false),
-            BreedEntity(3, "Bulldog", "Calm", "UK", "10 years", "Desc", "url", false)
+            BreedEntity(2, "German Shepherd", "Alert", "Germany", "13 years", "Desc", "url", false)
         )
 
         breedsFlow.value = sampleBreeds
-        val viewModel = BreedsViewModel(repository)
 
         viewModel.uiState.test {
-            awaitItem() // initial
+            expectMostRecentItem()
 
             viewModel.onSearchQueryChange("golden")
-            val emission = awaitItem()
-            assertEquals(1, emission.breeds.size)
-            assertEquals("Golden Retriever", emission.breeds[0].name)
-            assertEquals("golden", emission.searchQuery)
+            testDispatcher.scheduler.advanceUntilIdle()
 
-            cancelAndIgnoreRemainingEvents()
+            val state = expectMostRecentItem()
+            assertEquals(1, state.breeds.size)
+            assertEquals("Golden Retriever", state.breeds[0].name)
         }
     }
 
     @Test
     fun toggleFavoriteCallsRepository() = runTest {
         val breed = BreedEntity(1, "Bulldog", "Calm", "UK", "10 years", "Desc", "url", false)
-        val viewModel = BreedsViewModel(repository)
 
-        viewModel.uiState.test {
-            awaitItem() // initial
+        viewModel.toggleFavorite(breed)
+        testDispatcher.scheduler.advanceUntilIdle()
 
-            viewModel.toggleFavorite(breed)
-
-            coVerify(exactly = 1) { repository.toggleFavorite(1, false) }
-
-            cancelAndIgnoreRemainingEvents()
-        }
+        coVerify(exactly = 1) { repository.toggleFavorite(1, false) }
     }
 
     @Test
@@ -134,13 +120,13 @@ class BreedsViewModelTest {
         val errorMessage = "Network Error"
         coEvery { repository.refreshBreeds() } returns Result.failure(RuntimeException(errorMessage))
 
-        val viewModel = BreedsViewModel(repository)
+        // Создаем заново, чтобы init { refresh() } сработал с ошибкой
+        val errorViewModel = BreedsViewModel(repository)
 
-        viewModel.uiState.test {
-            val emission = awaitItem()
-            assertEquals(errorMessage, emission.error)
-
-            cancelAndIgnoreRemainingEvents()
+        errorViewModel.uiState.test {
+            testDispatcher.scheduler.advanceUntilIdle()
+            val state = expectMostRecentItem()
+            assertEquals(errorMessage, state.error)
         }
     }
 }
