@@ -101,4 +101,6 @@ dependencies {
 
 // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
+
+    testImplementation("androidx.test:core-ktx:1.6.1")
 }

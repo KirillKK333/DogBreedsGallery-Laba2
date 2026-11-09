@@ -124,11 +124,18 @@ class BreedIntegrationTest {
         val viewModel = BreedsViewModel(repository)
 
         viewModel.uiState.test {
-            val state = awaitItem()
+            // Ждем, пока ViewModel прогрузит данные из Room
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Игнорируем пустые состояния (initial value), ждем, пока придут данные
+            var state = awaitItem()
+            while (state.breeds.isEmpty()) {
+                state = awaitItem()
+            }
+
+            // Проверяем, что данные пришли правильные
             assertEquals(1, state.breeds.size)
             assertEquals("Husky", state.breeds[0].name)
-
-            cancelAndIgnoreRemainingEvents()
         }
     }
 }
