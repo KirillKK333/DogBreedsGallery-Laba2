@@ -113,7 +113,7 @@ fun BreedsScreen(
 }
 
 @Composable
-private fun BreedCard(
+fun BreedCard(
     breed: BreedEntity,
     onClick: () -> Unit,
     onFavoriteToggle: () -> Unit
