@@ -46,12 +46,7 @@ class BreedsViewModel(
         val error = values[4] as String?
         val loading = values[5] as Boolean
 
-        var filtered = if (query.isBlank()) breeds
-        else breeds.filter { it.name.contains(query, ignoreCase = true) }
-
-        if (temperament.isNotBlank()) {
-            filtered = filtered.filter { it.temperament.contains(temperament, ignoreCase = true) }
-        }
+        val filtered = filterBreeds(breeds, query, temperament)
 
         BreedsUiState(
             breeds = filtered,
@@ -66,6 +61,20 @@ class BreedsViewModel(
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = BreedsUiState()
     )
+
+    private fun filterBreeds(
+        breeds: List<BreedEntity>,
+        query: String,
+        temperament: String
+    ): List<BreedEntity> {
+        var filtered = if (query.isBlank()) breeds
+        else breeds.filter { it.name.contains(query, ignoreCase = true) }
+
+        if (temperament.isNotBlank()) {
+            filtered = filtered.filter { it.temperament.contains(temperament, ignoreCase = true) }
+        }
+        return filtered
+    }
 
     init {
         refresh()
