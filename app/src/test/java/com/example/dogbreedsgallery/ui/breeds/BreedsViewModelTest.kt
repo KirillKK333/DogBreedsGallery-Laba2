@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -127,6 +128,26 @@ class BreedsViewModelTest {
             testDispatcher.scheduler.advanceUntilIdle()
             val state = expectMostRecentItem()
             assertEquals(errorMessage, state.error)
+        }
+    }
+
+    @Test
+    fun filterByTemperamentReturnsMatchingBreeds() = runTest {
+        val sampleBreeds = listOf(
+            BreedEntity(1, "Golden Retriever", "Friendly, Intelligent", "UK", "12 years", "Desc", "url", false),
+            BreedEntity(2, "German Shepherd", "Alert, Loyal", "Germany", "13 years", "Desc", "url", false),
+            BreedEntity(3, "Labrador", "Friendly, Gentle", "UK", "12 years", "Desc", "url", false)
+        )
+
+        breedsFlow.value = sampleBreeds
+
+        viewModel.filterByTemperament("Friendly")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = expectMostRecentItem()
+            assertEquals(2, state.breeds.size)
+            assertTrue(state.breeds.all { it.temperament.contains("Friendly") })
         }
     }
 }
