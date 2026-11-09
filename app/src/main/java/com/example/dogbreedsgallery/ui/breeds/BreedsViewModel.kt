@@ -17,7 +17,8 @@ data class BreedsUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
-    val searchQuery: String = ""
+    val searchQuery: String = "",
+    val temperamentQuery: String = ""
 )
 
 class BreedsViewModel(
@@ -25,6 +26,7 @@ class BreedsViewModel(
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
+    private val _temperamentQuery = MutableStateFlow("")
     private val _isRefreshing = MutableStateFlow(false)
     private val _error = MutableStateFlow<String?>(null)
     private val _isLoading = MutableStateFlow(false)
@@ -32,18 +34,32 @@ class BreedsViewModel(
     val uiState: StateFlow<BreedsUiState> = combine(
         repository.allBreeds,
         _searchQuery,
+        _temperamentQuery,
         _isRefreshing,
         _error,
         _isLoading
-    ) { breeds, query, refreshing, error, loading ->
-        val filtered = if (query.isBlank()) breeds
+    ) { values ->
+        val breeds = values[0] as List<BreedEntity>
+        val query = values[1] as String
+        val temperament = values[2] as String
+        val refreshing = values[3] as Boolean
+        val error = values[4] as String?
+        val loading = values[5] as Boolean
+
+        var filtered = if (query.isBlank()) breeds
         else breeds.filter { it.name.contains(query, ignoreCase = true) }
+
+        if (temperament.isNotBlank()) {
+            filtered = filtered.filter { it.temperament.contains(temperament, ignoreCase = true) }
+        }
+
         BreedsUiState(
             breeds = filtered,
             isLoading = loading,
             isRefreshing = refreshing,
             error = error,
-            searchQuery = query
+            searchQuery = query,
+            temperamentQuery = temperament
         )
     }.stateIn(
         scope = viewModelScope,
@@ -56,6 +72,10 @@ class BreedsViewModel(
     }
 
     fun onSearchQueryChange(q: String) { _searchQuery.value = q }
+
+    fun filterByTemperament(temperament: String) {
+        _temperamentQuery.value = temperament
+    }
 
     fun refresh() {
         viewModelScope.launch {
